@@ -1,0 +1,153 @@
+Necesito que crees un microservicio de gestión de matrículas en Java con Spring Boot 3.x que se pueda ejecutar en Docker Desktop. Este es un proyecto DEMO SIMPLE con funcionalidades básicas, nada complejo. Incluye lo siguiente:
+
+TECNOLOGÍAS:
+- Java 17 o superior
+- Spring Boot 3.x
+- JPA/Hibernate
+- Base de datos PostgreSQL
+- Maven como gestor de dependencias
+- Lombok para reducir código boilerplate
+- Docker y Docker Compose
+- RestTemplate o WebClient para comunicación con microservicio de autenticación
+
+IMPORTANTE - INTEGRACIÓN CON MICROSERVICIO DE AUTENTICACIÓN:
+- El microservicio de autenticación ya existe en la carpeta ms-academic-auth
+- Para operaciones protegidas, debe validar el token JWT llamando al endpoint GET /api/auth/validate del microservicio de autenticación
+- Debe incluir un filtro o interceptor que valide el token en cada petición protegida
+- URL del servicio de autenticación: http://ms-auth:8081 (dentro de Docker)
+- NO debe duplicar la lógica de autenticación, solo consumir el servicio existente
+
+FUNCIONALIDADES BÁSICAS REQUERIDAS:
+
+1. Gestión de Estudiantes (CRUD simple):
+   - Crear estudiante
+   - Listar estudiantes
+   - Buscar estudiante por ID
+   - Actualizar estudiante
+   - Eliminar estudiante
+   - Campos: id, código, nombre, apellido, email, teléfono, carrera
+
+2. Gestión de Cursos (CRUD simple):
+   - Crear curso
+   - Listar cursos
+   - Buscar curso por ID
+   - Actualizar curso
+   - Eliminar curso
+   - Campos: id, código, nombre, créditos, cupos_totales, cupos_disponibles
+
+3. Gestión de Matrículas (funcionalidad básica):
+   - Matricular estudiante en un curso (validar cupos disponibles)
+   - Desmatricular estudiante de un curso
+   - Listar matrículas de un estudiante
+   - Listar estudiantes matriculados en un curso
+   - Campos: id, estudiante_id, curso_id, fecha_matricula, estado (ACTIVA, CANCELADA)
+
+4. Endpoints REST:
+   ESTUDIANTES:
+   - POST /api/students - Crear estudiante
+   - GET /api/students - Listar todos
+   - GET /api/students/{id} - Buscar por ID
+   - PUT /api/students/{id} - Actualizar
+   - DELETE /api/students/{id} - Eliminar
+
+   CURSOS:
+   - POST /api/courses - Crear curso
+   - GET /api/courses - Listar todos
+   - GET /api/courses/{id} - Buscar por ID
+   - PUT /api/courses/{id} - Actualizar
+   - DELETE /api/courses/{id} - Eliminar
+
+   MATRÍCULAS:
+   - POST /api/enrollments - Matricular estudiante
+   - DELETE /api/enrollments/{id} - Desmatricular
+   - GET /api/enrollments/student/{studentId} - Matrículas de un estudiante
+   - GET /api/enrollments/course/{courseId} - Estudiantes en un curso
+
+5. Estructura del proyecto:
+   - Arquitectura en capas: Controller, Service, Repository
+   - DTOs para Request y Response
+   - Manejo global de excepciones
+   - Validaciones con Bean Validation
+   - Configuración de CORS
+
+6. Base de datos:
+   - Tabla STUDENTS
+   - Tabla COURSES
+   - Tabla ENROLLMENTS
+
+7. Configuración:
+   - application.yml con perfiles (dev, prod)
+   - URL del microservicio de autenticación como variable de entorno
+   - Configuración de datasource
+
+DOCKERIZACIÓN (IMPORTANTE):
+
+8. Dockerfile:
+   - Multi-stage build para optimizar la imagen
+   - Usar imagen base de OpenJDK 17
+   - Exponer puerto 8082
+
+9. docker-compose.yml:
+   - Servicio para el microservicio de gestión académica
+   - Servicio para PostgreSQL
+   - Red compartida con el microservicio de autenticación (network: academic-network)
+   - Volúmenes para persistencia de datos
+   - Variables de entorno para configuración
+   - Health checks
+   - depends_on para asegurar que PostgreSQL inicie primero
+
+10. DATA POR DEFECTO (IMPORTANTE):
+    - Script SQL (data.sql) que inserte automáticamente:
+      * 5 estudiantes de ejemplo
+      * 5 cursos de ejemplo (con diferentes créditos y cupos)
+      * 3 matrículas de ejemplo
+    - El script debe ejecutarse automáticamente al iniciar el contenedor
+
+11. Scripts adicionales:
+    - .dockerignore
+
+ESTRUCTURA ESPERADA:
+ms-academic-management/
+├── src/main/java/com/proyecto/academic/
+│   ├── config/
+│   ├── controller/
+│   ├── dto/
+│   ├── entity/
+│   ├── repository/
+│   ├── service/
+│   ├── security/
+│   └── exception/
+├── src/main/resources/
+│   ├── application.yml
+│   ├── application-dev.yml
+│   └── data.sql (con datos de ejemplo)
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
+├── pom.xml
+└── README.md (con instrucciones de ejecución)
+
+VALIDACIONES BÁSICAS A IMPLEMENTAR:
+- No permitir matricular si no hay cupos disponibles
+- No permitir matricular dos veces al mismo estudiante en el mismo curso
+- Reducir cupos_disponibles al matricular
+- Aumentar cupos_disponibles al desmatricular
+- Validar que el estudiante y curso existan antes de matricular
+
+INSTRUCCIONES DE EJECUCIÓN QUE DEBE INCLUIR EL README:
+- Prerequisito: El microservicio ms-academic-auth debe estar ejecutándose
+- Cómo construir la imagen: docker-compose build
+- Cómo levantar los servicios: docker-compose up -d
+- Cómo detener los servicios: docker-compose down
+- URL de acceso: http://localhost:8082
+- Ejemplos de llamadas a los endpoints con curl o Postman
+- Instrucciones para conectar ambos microservicios en la misma red Docker
+
+NOTAS IMPORTANTES:
+- Mantener el código SIMPLE y limpio
+- Evitar sobre-ingeniería
+- Enfocarse en funcionalidad básica que funcione
+- Los datos de ejemplo deben cargarse automáticamente al levantar el contenedor
+- Debe poder probarse fácilmente con Postman
+
+Incluye el código completo de todos los archivos necesarios para que pueda ejecutar el microservicio directamente en Docker Desktop sin configuraciones adicionales.

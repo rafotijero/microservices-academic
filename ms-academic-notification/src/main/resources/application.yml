@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: ms-academic-notification
+
+  profiles:
+    active: ${SPRING_PROFILE:dev}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 2000
+          max-attempts: 3
+          multiplier: 2
+
+  mail:
+    host: ${MAIL_HOST:smtp.ethereal.email}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:gregorio.oconner76@ethereal.email}
+    password: ${MAIL_PASSWORD:Cjxq14JGFPCZM72psn}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+server:
+  port: ${SERVER_PORT:8083}
+
+rabbitmq:
+  exchange:
+    name: enrollment.exchange
+  queue:
+    name: enrollment.notification.queue
+  routing:
+    key: enrollment.created
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.proyecto.notification: INFO
+    org.springframework.amqp: INFO

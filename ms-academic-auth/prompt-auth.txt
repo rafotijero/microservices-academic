@@ -1,0 +1,101 @@
+Necesito que crees un microservicio de autenticación en Java con Spring Boot 3.x que se pueda ejecutar en Docker Desktop. Incluye lo siguiente:
+
+TECNOLOGÍAS:
+- Java 17 o superior
+- Spring Boot 3.x
+- Spring Security 6
+- JWT para tokens de autenticación
+- JPA/Hibernate
+- Base de datos PostgreSQL (para facilitar containerización)
+- Maven como gestor de dependencias
+- Lombok para reducir código boilerplate
+- Docker y Docker Compose
+
+FUNCIONALIDADES REQUERIDAS:
+
+1. Gestión de Usuarios:
+   - Registro de usuarios (estudiantes, profesores, administradores)
+   - Login con email/username y contraseña
+   - Cifrado de contraseñas con BCrypt
+   - Gestión de roles (ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN)
+
+2. Autenticación JWT:
+   - Endpoint de login que genere access token y refresh token
+   - Validación de tokens
+   - Endpoint de refresh token
+   - Logout (invalidación de token)
+   - Tiempo de expiración configurable
+
+3. Endpoints REST:
+   - POST /api/auth/register - Registro de usuarios
+   - POST /api/auth/login - Autenticación
+   - POST /api/auth/refresh - Renovar token
+   - POST /api/auth/logout - Cerrar sesión
+   - GET /api/auth/validate - Validar token (para otros microservicios)
+   - GET /api/auth/me - Obtener datos del usuario autenticado
+
+4. Estructura del proyecto:
+   - Arquitectura en capas: Controller, Service, Repository
+   - DTOs para Request y Response
+   - Manejo global de excepciones
+   - Validaciones con Bean Validation
+   - Configuración de CORS
+
+5. Base de datos:
+   - Tabla USERS (id, username, email, password, enabled, created_at, updated_at)
+   - Tabla ROLES (id, name)
+   - Tabla USER_ROLES (relación muchos a muchos)
+
+6. Configuración:
+   - application.yml con perfiles (dev, prod)
+   - Variables para JWT secret, tiempo de expiración
+   - Configuración de datasource
+
+DOCKERIZACIÓN (IMPORTANTE):
+
+7. Dockerfile:
+   - Multi-stage build para optimizar la imagen
+   - Usar imagen base de OpenJDK 17
+   - Exponer puerto 8081
+
+8. docker-compose.yml:
+   - Servicio para el microservicio de autenticación
+   - Servicio para PostgreSQL
+   - Red interna para comunicación entre contenedores
+   - Volúmenes para persistencia de datos
+   - Variables de entorno para configuración
+   - Health checks
+
+9. Scripts adicionales:
+   - Script SQL de inicialización (crear roles por defecto)
+   - .dockerignore
+
+ESTRUCTURA ESPERADA:
+ms-authentication/
+├── src/main/java/com/proyecto/auth/
+│   ├── config/
+│   ├── controller/
+│   ├── dto/
+│   ├── entity/
+│   ├── repository/
+│   ├── service/
+│   ├── security/
+│   └── exception/
+├── src/main/resources/
+│   ├── application.yml
+│   ├── application-dev.yml
+│   └── init.sql
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
+├── pom.xml
+└── README.md (con instrucciones de ejecución)
+
+INSTRUCCIONES DE EJECUCIÓN QUE DEBE INCLUIR EL README:
+- Cómo construir la imagen: docker-compose build
+- Cómo levantar los servicios: docker-compose up -d
+- Cómo detener los servicios: docker-compose down
+- URL de acceso: http://localhost:8081
+- Ejemplos de llamadas a los endpoints con curl o Postman
+
+Incluye el código completo de todos los archivos necesarios para que pueda ejecutar el microservicio directamente en Docker Desktop sin configuraciones adicionales.

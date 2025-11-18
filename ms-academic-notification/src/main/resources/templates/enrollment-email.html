@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Matrícula</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8fafc;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+                                Universidad - Sistema de Matrículas
+                            </h1>
+                            <p style="color: #e0e7ff; margin: 10px 0 0 0; font-size: 16px;">
+                                Confirmación de Matrícula Exitosa
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Welcome Section -->
+                    <tr>
+                        <td style="padding: 30px 30px 20px 30px;">
+                            <h2 style="color: #1e293b; margin: 0 0 15px 0; font-size: 22px;">
+                                ¡Hola <span th:text="${studentName}">Estudiante</span>!
+                            </h2>
+                            <p style="color: #475569; line-height: 1.6; margin: 0; font-size: 16px;">
+                                Te confirmamos que tu matrícula se ha realizado exitosamente. A continuación encontrarás los detalles:
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Enrollment Details Table -->
+                    <tr>
+                        <td style="padding: 0 30px 30px 30px;">
+                            <table style="width: 100%; border-collapse: collapse; background-color: #f8fafc; border-radius: 6px; overflow: hidden;">
+                                <tr>
+                                    <td colspan="2" style="background-color: #2563eb; color: #ffffff; padding: 12px 20px; font-weight: bold; font-size: 16px;">
+                                        Detalles de la Matrícula
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600; width: 40%;">
+                                        Código de Matrícula
+                                    </td>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-weight: bold;">
+                                        #<span th:text="${enrollmentId}">001</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600;">
+                                        Estudiante
+                                    </td>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+                                        <span th:text="${studentName}">Nombre del Estudiante</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600;">
+                                        Curso
+                                    </td>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+                                        <span th:text="${courseName}">Nombre del Curso</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600;">
+                                        Código del Curso
+                                    </td>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+                                        <span th:text="${courseCode}">CS101</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600;">
+                                        Créditos
+                                    </td>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+                                        <span th:text="${courseCredits}">4</span> créditos
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 600;">
+                                        Fecha de Matrícula
+                                    </td>
+                                    <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #1e293b;">
+                                        <span th:text="${enrollmentDate}">2024-11-17</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 20px; color: #64748b; font-weight: 600;">
+                                        Estado
+                                    </td>
+                                    <td style="padding: 15px 20px;">
+                                        <span style="background-color: #10b981; color: #ffffff; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 14px;" th:text="${status}">ACTIVA</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Important Notice -->
+                    <tr>
+                        <td style="padding: 0 30px 30px 30px;">
+                            <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px 20px; border-radius: 4px;">
+                                <p style="margin: 0; color: #1e40af; font-size: 14px; line-height: 1.6;">
+                                    <strong>Importante:</strong> Guarda este correo como comprobante de tu matrícula.
+                                    Recuerda revisar los horarios y el aula asignada en el sistema académico.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #1e293b; padding: 30px; text-align: center; border-radius: 0 0 8px 8px;">
+                            <p style="color: #94a3b8; margin: 0 0 10px 0; font-size: 14px;">
+                                Universidad - Departamento de Registro Académico
+                            </p>
+                            <p style="color: #64748b; margin: 0; font-size: 13px;">
+                                Email: registro@universidad.edu | Teléfono: +1 (555) 123-4567
+                            </p>
+                            <p style="color: #475569; margin: 15px 0 0 0; font-size: 12px;">
+                                Este es un correo automático, por favor no responder.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

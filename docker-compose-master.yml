@@ -1,0 +1,181 @@
+version: '3.8'
+
+networks:
+  academic-network:
+    driver: bridge
+
+volumes:
+  postgres-auth-data:
+  postgres-management-data:
+  rabbitmq-data:
+
+services:
+  # ========================================
+  # BASE DE DATOS PARA AUTENTICACIÓN
+  # ========================================
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # BASE DE DATOS PARA GESTIÓN ACADÉMICA
+  # ========================================
+  postgres-management:
+    image: postgres:15-alpine
+    container_name: postgres-management
+    environment:
+      POSTGRES_DB: academic_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-management-data:/var/lib/postgresql/data
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # RABBITMQ
+  # ========================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    ports:
+      - "5672:5672"   # Puerto AMQP
+      - "15672:15672" # Puerto Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # MICROSERVICIO DE AUTENTICACIÓN
+  # ========================================
+  ms-auth:
+    build:
+      context: ./ms-academic-auth
+      dockerfile: Dockerfile
+    container_name: ms-auth
+    environment:
+      SPRING_PROFILE: dev
+      DB_HOST: postgres-auth
+      DB_PORT: 5432
+      DB_NAME: auth_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: mySecretKeyForJWT2024SuperSecureAndLongEnough123456789
+      JWT_ACCESS_EXPIRATION: 3600000
+      JWT_REFRESH_EXPIRATION: 86400000
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # MICROSERVICIO DE GESTIÓN ACADÉMICA
+  # ========================================
+  ms-management:
+    build:
+      context: ./ms-academic-management
+      dockerfile: Dockerfile
+    container_name: ms-management
+    environment:
+      SPRING_PROFILE: dev
+      DB_HOST: postgres-management
+      DB_PORT: 5432
+      DB_NAME: academic_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      SERVER_PORT: 8082
+      AUTH_SERVICE_URL: http://ms-auth:8081
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASSWORD: admin123
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres-management:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ms-auth:
+        condition: service_healthy
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # MICROSERVICIO DE NOTIFICACIONES
+  # ========================================
+  ms-notification:
+    build:
+      context: ./ms-academic-notification
+      dockerfile: Dockerfile
+    container_name: ms-notification
+    environment:
+      SPRING_PROFILE: dev
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASSWORD: admin123
+      MAIL_HOST: smtp.mailtrap.io
+      MAIL_PORT: 2525
+      MAIL_USERNAME: 6abd9f88309e4d
+      MAIL_PASSWORD: 4ec30b10b54c0b
+      SERVER_PORT: 8083
+    ports:
+      - "8083:8083"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8083/api/notifications/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

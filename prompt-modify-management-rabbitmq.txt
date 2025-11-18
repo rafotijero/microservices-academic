@@ -1,0 +1,123 @@
+Necesito que MODIFIQUES el microservicio existente ms-academic-management para que publique mensajes en RabbitMQ cuando se cree una matrícula exitosamente.
+
+CONTEXTO:
+- El microservicio ms-academic-management YA EXISTE
+- Ya tiene funcionalidad de crear matrículas
+- Ahora necesita publicar un mensaje en RabbitMQ después de crear una matrícula
+
+MODIFICACIONES NECESARIAS:
+
+1. AGREGAR DEPENDENCIA EN pom.xml:
+   - Agregar Spring AMQP (RabbitMQ)
+   ```xml
+   <dependency>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-amqp</artifactId>
+   </dependency>
+   ```
+
+2. CREAR CONFIGURACIÓN DE RABBITMQ:
+   - Crear clase: config/RabbitMQConfig.java
+   - Configurar:
+     * Exchange: enrollment.exchange (tipo: direct)
+     * Queue: enrollment.notification.queue
+     * Routing Key: enrollment.created
+     * Binding entre exchange, queue y routing key
+
+3. CREAR DTO PARA EL MENSAJE:
+   - Crear clase: dto/EnrollmentMessageDTO.java
+   - Campos:
+     * enrollmentId (Long)
+     * studentId (Long)
+     * studentName (String)
+     * studentEmail (String)
+     * courseId (Long)
+     * courseCode (String)
+     * courseName (String)
+     * courseCredits (Integer)
+     * enrollmentDate (LocalDateTime)
+     * status (String)
+
+4. CREAR SERVICIO PARA PUBLICAR MENSAJES:
+   - Crear clase: service/RabbitMQProducerService.java
+   - Inyectar RabbitTemplate
+   - Método: publishEnrollmentCreated(EnrollmentMessageDTO message)
+   - Usar convertAndSend() para enviar el mensaje al exchange con routing key
+
+5. MODIFICAR EnrollmentService (o el servicio que crea matrículas):
+   - Inyectar RabbitMQProducerService
+   - En el método que crea la matrícula (createEnrollment o similar):
+     * DESPUÉS de guardar la matrícula exitosamente en la BD
+     * ANTES de retornar la respuesta
+     * Construir el EnrollmentMessageDTO con todos los datos
+     * Llamar a rabbitMQProducerService.publishEnrollmentCreated(message)
+   - Agregar try-catch para que si falla el envío a RabbitMQ no afecte la matrícula
+   - Loggear si se envió exitosamente o si hubo error
+
+6. ACTUALIZAR application.yml:
+   - Agregar configuración de RabbitMQ:
+   ```yaml
+   spring:
+     rabbitmq:
+       host: rabbitmq
+       port: 5672
+       username: admin
+       password: admin123
+   ```
+
+7. ACTUALIZAR docker-compose.yml:
+   - El servicio ms-academic-management debe tener depends_on: rabbitmq
+   - Asegurar que está en la misma red: academic-network
+
+8. LOGGING:
+   - Log cuando se publique el mensaje exitosamente
+   - Log con el ID de la matrícula
+   - Log si hay error al publicar (pero sin romper el flujo)
+
+COMPORTAMIENTO ESPERADO:
+
+Flujo actual:
+1. Usuario hace POST /api/enrollments
+2. Se valida y crea la matrícula
+3. Se retorna respuesta
+
+Flujo modificado:
+1. Usuario hace POST /api/enrollments
+2. Se valida y crea la matrícula
+3. **[NUEVO]** Se publica mensaje en RabbitMQ
+4. Se retorna respuesta
+
+IMPORTANTE:
+- El envío a RabbitMQ NO debe bloquear la respuesta al usuario
+- Si RabbitMQ falla, la matrícula debe crearse igual (registrar error en log)
+- El mensaje debe contener TODOS los datos necesarios para el email
+- Obtener el email del estudiante desde la tabla STUDENTS
+
+EJEMPLO DE LOG ESPERADO:
+```
+INFO - Matrícula creada exitosamente: ID=1, Student=Juan Pérez, Course=CS101
+INFO - Mensaje publicado en RabbitMQ: enrollmentId=1
+```
+
+O en caso de error:
+```
+INFO - Matrícula creada exitosamente: ID=1, Student=Juan Pérez, Course=CS101
+ERROR - Error al publicar mensaje en RabbitMQ: Connection refused
+```
+
+ARCHIVOS A CREAR/MODIFICAR:
+- pom.xml (agregar dependencia)
+- config/RabbitMQConfig.java (NUEVO)
+- dto/EnrollmentMessageDTO.java (NUEVO)
+- service/RabbitMQProducerService.java (NUEVO)
+- service/EnrollmentService.java (MODIFICAR - agregar publicación de mensaje)
+- application.yml (agregar configuración RabbitMQ)
+- docker-compose.yml (agregar depends_on rabbitmq)
+
+NOTAS:
+- Mantener el código SIMPLE
+- No modificar la lógica existente de creación de matrículas
+- Solo AGREGAR la publicación del mensaje
+- El microservicio debe funcionar aunque RabbitMQ no esté disponible
+
+Genera SOLO los archivos nuevos y las modificaciones necesarias. Indica claramente qué archivos son nuevos y qué archivos se modifican.

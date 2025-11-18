@@ -1,0 +1,171 @@
+Necesito que crees un microservicio de notificaciones en Java con Spring Boot 3.x que consuma mensajes de RabbitMQ y envíe emails HTML. Este servicio debe crearse en una SUBCARPETA llamada "ms-academic-notification". Es un proyecto DEMO SIMPLE.
+
+IMPORTANTE - ESTRUCTURA DE CARPETAS:
+- Crear el proyecto dentro de la subcarpeta: ms-academic-notification/
+- Toda la estructura del proyecto debe estar dentro de esa subcarpeta
+
+TECNOLOGÍAS:
+- Java 17 o superior
+- Spring Boot 3.x
+- Spring AMQP (RabbitMQ)
+- Spring Mail (JavaMailSender)
+- Thymeleaf (para plantillas HTML de email)
+- Maven como gestor de dependencias
+- Lombok para reducir código boilerplate
+- Docker y Docker Compose
+
+FUNCIONALIDAD PRINCIPAL:
+- Consumir mensajes de RabbitMQ cuando se crea una matrícula
+- Generar un email HTML vistoso con los datos de la matrícula
+- Enviar el email al estudiante matriculado
+
+CONFIGURACIÓN DE RABBITMQ:
+- Host: rabbitmq (nombre del servicio en Docker)
+- Puerto: 5672
+- Usuario: admin
+- Password: admin123
+- Exchange: enrollment.exchange
+- Exchange Type: direct
+- Queue: enrollment.notification.queue
+- Routing Key: enrollment.created
+
+CONFIGURACIÓN DE EMAIL (ETHEREAL):
+- Host: smtp.ethereal.email
+- Puerto: 587
+- Usuario: gregorio.oconner76@ethereal.email
+- Password: Cjxq14JGFPCZM72psn
+- URL para ver emails: https://ethereal.email/messages
+
+ESTRUCTURA DEL MENSAJE QUE LLEGA DE RABBITMQ:
+El mensaje será un JSON con la siguiente estructura:
+{
+  "enrollmentId": 1,
+  "studentId": 1,
+  "studentName": "Juan Pérez",
+  "studentEmail": "juan.perez@university.edu",
+  "courseId": 3,
+  "courseCode": "CS101",
+  "courseName": "Introducción a la Programación",
+  "courseCredits": 4,
+  "enrollmentDate": "2024-11-17T10:30:00",
+  "status": "ACTIVA"
+}
+
+FUNCIONALIDADES REQUERIDAS:
+
+1. Listener de RabbitMQ:
+   - Escuchar mensajes de la cola enrollment.notification.queue
+   - Deserializar el JSON a un DTO
+   - Procesar el mensaje y enviar email
+   - Manejo de errores con reintentos (máximo 3 intentos)
+
+2. Servicio de Email:
+   - Generar HTML vistoso con los datos de la matrícula
+   - Incluir: logo universitario (placeholder), datos del estudiante, datos del curso, fecha de matrícula
+   - Estilo profesional con colores (azul y blanco universitario)
+   - Responsive design
+   - Asunto del email: "Confirmación de Matrícula - [Nombre del Curso]"
+
+3. Plantilla HTML del Email (debe ser vistosa):
+   - Header con título "Universidad - Sistema de Matrículas"
+   - Sección de bienvenida
+   - Tabla con detalles de la matrícula:
+     * Código de Matrícula
+     * Estudiante
+     * Curso
+     * Código del Curso
+     * Créditos
+     * Fecha de Matrícula
+     * Estado
+   - Footer con información de contacto
+   - Usar colores: #2563eb (azul), #f8fafc (fondo), #1e293b (texto)
+
+4. Endpoints REST (para monitoreo):
+   - GET /api/notifications/health - Health check
+   - GET /api/notifications/stats - Estadísticas (emails enviados, errores)
+
+5. Estructura del proyecto:
+   - Arquitectura en capas: Listener, Service, DTO
+   - DTOs para el mensaje de RabbitMQ
+   - Manejo global de excepciones
+   - Logging detallado
+
+6. Configuración:
+   - application.yml con perfiles (dev, prod)
+   - Variables de entorno para RabbitMQ y Email
+   - Configuración de reintentos
+
+DOCKERIZACIÓN (IMPORTANTE):
+
+7. Dockerfile:
+   - Multi-stage build para optimizar la imagen
+   - Usar imagen base de OpenJDK 17
+   - Exponer puerto 8083
+
+8. docker-compose.yml:
+   - Servicio para el microservicio de notificaciones
+   - Servicio para RabbitMQ (imagen: rabbitmq:3-management)
+   - Red compartida: academic-network
+   - Variables de entorno para configuración
+   - Health checks
+   - depends_on para asegurar que RabbitMQ inicie primero
+   - Management UI de RabbitMQ en puerto 15672
+
+9. Scripts adicionales:
+   - .dockerignore
+
+ESTRUCTURA ESPERADA:
+ms-academic-notification/
+├── src/main/java/com/proyecto/notification/
+│   ├── config/
+│   │   ├── RabbitMQConfig.java
+│   │   └── EmailConfig.java
+│   ├── listener/
+│   │   └── EnrollmentListener.java
+│   ├── service/
+│   │   └── EmailService.java
+│   ├── dto/
+│   │   └── EnrollmentMessageDTO.java
+│   ├── controller/
+│   │   └── NotificationController.java
+│   └── NotificationApplication.java
+├── src/main/resources/
+│   ├── templates/
+│   │   └── enrollment-email.html (plantilla Thymeleaf)
+│   ├── application.yml
+│   └── application-dev.yml
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
+├── pom.xml
+└── README.md
+
+LOGGING:
+- Registrar cada mensaje recibido
+- Registrar cada email enviado exitosamente
+- Registrar errores detallados
+- Usar nivel INFO para operaciones normales
+
+MANEJO DE ERRORES:
+- Si falla el envío de email, reintentar hasta 3 veces
+- Si RabbitMQ no está disponible, reconectar automáticamente
+- Logs claros de todos los errores
+
+INSTRUCCIONES DE EJECUCIÓN QUE DEBE INCLUIR EL README:
+- Prerequisito: RabbitMQ debe estar ejecutándose
+- Cómo construir la imagen: docker-compose build
+- Cómo levantar los servicios: docker-compose up -d
+- Cómo detener los servicios: docker-compose down
+- URL de acceso: http://localhost:8083
+- URL de RabbitMQ Management: http://localhost:15672 (user: admin, pass: admin123)
+- URL para ver emails enviados: https://ethereal.email/messages
+- Cómo ver los logs: docker-compose logs -f ms-notification
+
+NOTAS IMPORTANTES:
+- El HTML del email debe ser VISTOSO y PROFESIONAL
+- Incluir estilos inline en el HTML (algunos clientes de email no soportan CSS externo)
+- Mantener el código SIMPLE y limpio
+- Los datos del email vienen del mensaje de RabbitMQ, no de base de datos
+- El microservicio es stateless (no guarda información en BD)
+
+Incluye el código completo de todos los archivos necesarios para que pueda ejecutar el microservicio directamente en Docker Desktop sin configuraciones adicionales.

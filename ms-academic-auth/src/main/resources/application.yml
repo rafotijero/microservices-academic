@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: ms-academic-auth
+
+  profiles:
+    active: ${SPRING_PROFILE:dev}
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    defer-datasource-initialization: false
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:init.sql
+
+server:
+  port: ${PORT:8081}
+  servlet:
+    context-path: /
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+    access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:3600000} # 1 hora
+    refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:86400000} # 24 horas
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.proyecto.auth: DEBUG
+    org.springframework.security: DEBUG
