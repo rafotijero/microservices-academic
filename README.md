@@ -344,9 +344,6 @@ A continuación, se resume la estructura de paquetes de cada microservicio para 
 
 ## 📖 Documentación Detallada
 
-Para una guía completa de ejecución y troubleshooting, ver:
-- [GUIA-EJECUCION.md](./GUIA-EJECUCION.md) - Guía paso a paso completa
-
 Para documentación de cada microservicio:
 - [ms-academic-auth/README.md](./ms-academic-auth/README.md)
 - [ms-academic-management/README.md](./ms-academic-management/README.md)
