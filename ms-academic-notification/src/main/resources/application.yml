@@ -19,10 +19,10 @@ spring:
           multiplier: 2
 
   mail:
-    host: ${MAIL_HOST:smtp.ethereal.email}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:gregorio.oconner76@ethereal.email}
-    password: ${MAIL_PASSWORD:Cjxq14JGFPCZM72psn}
+    host: ${MAIL_HOST:smtp.mailtrap.io}
+    port: ${MAIL_PORT:2525}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:

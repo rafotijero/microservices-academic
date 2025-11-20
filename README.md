@@ -213,9 +213,8 @@ curl -X POST http://localhost:8082/api/enrollments \
   -H "Content-Type: application/json" \
   -d '{"estudianteId":1,"cursoId":1}'
 
-# 3. Ver email enviado
-# Ir a: https://ethereal.email/messages
-# Login: gregorio.oconner76@ethereal.email / Cjxq14JGFPCZM72psn
+# 3. Ver email enviado en Mailtrap
+# Ir a: https://mailtrap.io/inboxes/
 
 # 4. Consultar eventos de auditoría
 curl http://localhost:8084/api/audit/stats
@@ -379,7 +378,7 @@ docker-compose -f docker-compose-master.yml down -v
 - [ ] Listado de estudiantes y cursos funciona
 - [ ] Creación de matrícula exitosa
 - [ ] Mensaje visible en RabbitMQ Management
-- [ ] Email recibido en Ethereal
+- [ ] Email recibido en Mailtrap
 - [ ] Evento registrado en ms-audit
 - [ ] Estadísticas de auditoría actualizadas
 

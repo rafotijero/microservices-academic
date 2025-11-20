@@ -28,12 +28,14 @@ Microservicio de notificaciones que consume mensajes de RabbitMQ y envía emails
 - **Puerto**: 5672
 - **Management UI**: http://localhost:15672
 
-## Configuración de Email (Ethereal)
+## Configuración de Email
 
-- **Host**: smtp.ethereal.email
-- **Puerto**: 587
-- **Usuario**: gregorio.oconner76@ethereal.email
-- **Ver emails enviados**: https://ethereal.email/messages
+El servicio usa las credenciales SMTP configuradas en las variables de entorno. Por defecto usa Mailtrap.
+
+- **Host**: Configurado en `MAIL_HOST`
+- **Puerto**: Configurado en `MAIL_PORT`
+- **Usuario**: Configurado en `MAIL_USERNAME`
+- **Ver emails enviados**: https://mailtrap.io/inboxes/
 
 ## Estructura del Mensaje (JSON)
 
@@ -116,7 +118,7 @@ curl http://localhost:8083/api/notifications/stats
 
 - **Aplicación**: http://localhost:8083
 - **RabbitMQ Management**: http://localhost:15672 (admin / admin123)
-- **Ver emails enviados**: https://ethereal.email/messages
+- **Ver emails enviados**: https://mailtrap.io/inboxes/
 
 ## Probar el Envío de Emails
 
@@ -129,7 +131,7 @@ curl http://localhost:8083/api/notifications/stats
 5. Pegar el JSON de ejemplo en el payload
 6. Click "Publish message"
 7. Verificar logs: `docker-compose logs -f ms-notification`
-8. Ver email en: https://ethereal.email/messages
+8. Ver email en: https://mailtrap.io/inboxes/
 
 ### Opción 2: Desde el microservicio de gestión académica
 
@@ -191,7 +193,7 @@ docker-compose logs rabbitmq
    docker-compose logs -f ms-notification
    ```
 
-2. Verificar que las credenciales de Ethereal sean correctas
+2. Verificar que las credenciales SMTP sean correctas en el archivo .env
 
 3. Verificar la conectividad SMTP
 

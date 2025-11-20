@@ -33,10 +33,10 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: admin
       RABBITMQ_PASSWORD: admin123
-      MAIL_HOST: smtp.ethereal.email
-      MAIL_PORT: 587
-      MAIL_USERNAME: gregorio.oconner76@ethereal.email
-      MAIL_PASSWORD: Cjxq14JGFPCZM72psn
+      MAIL_HOST: ${MAIL_HOST:-smtp.mailtrap.io}
+      MAIL_PORT: ${MAIL_PORT:-2525}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
     networks:
       - academic-network
     depends_on:
