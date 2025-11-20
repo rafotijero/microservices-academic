@@ -1,0 +1,8 @@
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.proyecto.audit: DEBUG
+    org.springframework.kafka: DEBUG

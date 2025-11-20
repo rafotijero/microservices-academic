@@ -1,6 +1,7 @@
 package com.proyecto.academic.service;
 
 import com.proyecto.academic.dto.CourseResponse;
+import com.proyecto.academic.dto.EnrollmentEventDTO;
 import com.proyecto.academic.dto.EnrollmentMessageDTO;
 import com.proyecto.academic.dto.EnrollmentRequest;
 import com.proyecto.academic.dto.EnrollmentResponse;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,6 +33,7 @@ public class EnrollmentService {
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
     private final RabbitMQProducerService rabbitMQProducerService;
+    private final KafkaProducerService kafkaProducerService;
 
     @Transactional
     public EnrollmentResponse enrollStudent(EnrollmentRequest request) {
@@ -89,6 +92,32 @@ public class EnrollmentService {
                     savedEnrollment.getId(), e.getMessage());
         }
 
+        // Publicar evento en Kafka para auditoría
+        try {
+            EnrollmentEventDTO kafkaEvent = EnrollmentEventDTO.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .eventType("ENROLLMENT_CREATED")
+                    .timestamp(LocalDateTime.now())
+                    .enrollmentId(savedEnrollment.getId())
+                    .studentId(student.getId())
+                    .studentName(student.getNombre() + " " + student.getApellido())
+                    .studentEmail(student.getEmail())
+                    .courseId(course.getId())
+                    .courseCode(course.getCodigo())
+                    .courseName(course.getNombre())
+                    .courseCredits(course.getCreditos())
+                    .enrollmentDate(savedEnrollment.getFechaMatricula())
+                    .status("ACTIVA")
+                    .build();
+
+            kafkaProducerService.publishEnrollmentCreated(kafkaEvent);
+            log.info("Evento publicado en Kafka: eventId={}, eventType=ENROLLMENT_CREATED, enrollmentId={}",
+                    kafkaEvent.getEventId(), kafkaEvent.getEnrollmentId());
+        } catch (Exception e) {
+            log.error("Error al publicar evento en Kafka: enrollmentId={}, error={}",
+                    savedEnrollment.getId(), e.getMessage());
+        }
+
         return mapToResponse(savedEnrollment);
     }
 
@@ -107,7 +136,41 @@ public class EnrollmentService {
         courseRepository.save(course);
 
         enrollment.setEstado(EstadoMatricula.CANCELADA);
-        enrollmentRepository.save(enrollment);
+        Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+
+        Student student = enrollment.getEstudiante();
+
+        log.info("Matrícula cancelada: ID={}, Student={} {}, Course={}",
+                savedEnrollment.getId(),
+                student.getNombre(),
+                student.getApellido(),
+                course.getCodigo());
+
+        // Publicar evento en Kafka para auditoría
+        try {
+            EnrollmentEventDTO kafkaEvent = EnrollmentEventDTO.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .eventType("ENROLLMENT_CANCELLED")
+                    .timestamp(LocalDateTime.now())
+                    .enrollmentId(savedEnrollment.getId())
+                    .studentId(student.getId())
+                    .studentName(student.getNombre() + " " + student.getApellido())
+                    .studentEmail(student.getEmail())
+                    .courseId(course.getId())
+                    .courseCode(course.getCodigo())
+                    .courseName(course.getNombre())
+                    .courseCredits(course.getCreditos())
+                    .enrollmentDate(savedEnrollment.getFechaMatricula())
+                    .status("CANCELADA")
+                    .build();
+
+            kafkaProducerService.publishEnrollmentCancelled(kafkaEvent);
+            log.info("Evento publicado en Kafka: eventId={}, eventType=ENROLLMENT_CANCELLED, enrollmentId={}",
+                    kafkaEvent.getEventId(), kafkaEvent.getEnrollmentId());
+        } catch (Exception e) {
+            log.error("Error al publicar evento en Kafka: enrollmentId={}, error={}",
+                    savedEnrollment.getId(), e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)

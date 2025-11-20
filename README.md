@@ -6,7 +6,7 @@ Sistema completo de gestión académica basado en microservicios con Spring Boot
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         CLIENTE                                  │
+│                         CLIENTE                                 │
 └────────────┬─────────────────────────────┬──────────────────────┘
              │                             │
     ┌────────▼─────────┐         ┌────────▼──────────────┐
@@ -17,20 +17,21 @@ Sistema completo de gestión académica basado en microservicios con Spring Boot
              │                   │  Matrículas           │
     ┌────────▼─────────┐         └────────┬──────────────┘
     │  PostgreSQL      │                  │
-    │  auth_db         │                  │ Publica
-    │  :5432           │                  │ Mensaje
-    └──────────────────┘         ┌────────▼──────────────┐
-                                 │  RabbitMQ             │
-    ┌──────────────────┐         │  Exchange & Queue     │
-    │  PostgreSQL      │         │  :5672 / :15672       │
-    │  academic_db     │         └────────┬──────────────┘
-    │  :5433           │                  │
-    └──────────────────┘                  │ Consume
-                                 ┌────────▼──────────────┐
-                                 │  ms-notification      │
-                                 │  (8083)               │
-                                 │  Envío de Emails      │
-                                 └───────────────────────┘
+    │  auth_db         │                  ├──────────────────┐
+    │  :5434           │                  │                  │
+    └──────────────────┘         ┌────────▼──────┐  ┌────────▼──────┐
+                                 │  RabbitMQ     │  │    Kafka      │
+    ┌──────────────────┐         │  :5672/:15672 │  │  :9092/:29092 │
+    │  PostgreSQL      │         └────────┬──────┘  └────────┬──────┘
+    │  academic_db     │                  │                  │
+    │  :5433           │                  │ Consume          │ Consume
+    └──────────────────┘         ┌────────▼──────┐  ┌────────▼──────┐
+                                 │ms-notification│  │   ms-audit    │
+    ┌──────────────────┐         │   (8083)      │  │   (8084)      │
+    │  PostgreSQL      │         │ Envío Emails  │  │  Auditoría    │
+    │  audit_db        │         └───────────────┘  └───────┬───────┘
+    │  :5435           │◄───────────────────────────────────┘
+    └──────────────────┘
 ```
 
 ## 📦 Microservicios
@@ -63,21 +64,35 @@ Sistema completo de gestión académica basado en microservicios con Spring Boot
   - Genera emails HTML profesionales
   - Reintentos automáticos
 
+### 4️⃣ ms-academic-audit
+- **Puerto:** 8084
+- **Función:** Auditoría y registro histórico de eventos
+- **Tecnologías:** Spring Kafka, PostgreSQL, JPA
+- **Endpoints principales:**
+  - GET `/api/audit/events` - Listar eventos (paginado)
+  - GET `/api/audit/events/student/{id}` - Historial por estudiante
+  - GET `/api/audit/events/course/{id}` - Historial por curso
+  - GET `/api/audit/stats` - Estadísticas generales
+
 ## 🚀 Inicio Rápido
 
 ### Opción A: Todo en un comando (RECOMENDADO)
 
 ```bash
-# 1. Construir todas las imágenes
+# 1. Copiar y configurar el archivo de variables de entorno
+cp .env.example .env
+# Editar .env con tus credenciales (MAIL_USERNAME, MAIL_PASSWORD, etc.)
+
+# 2. Construir todas las imágenes
 docker-compose -f docker-compose-master.yml build
 
-# 2. Levantar todos los servicios
+# 3. Levantar todos los servicios
 docker-compose -f docker-compose-master.yml up -d
 
-# 3. Verificar estado
+# 4. Verificar estado
 docker-compose -f docker-compose-master.yml ps
 
-# 4. Ver logs
+# 5. Ver logs
 docker-compose -f docker-compose-master.yml logs -f
 ```
 
@@ -100,9 +115,89 @@ docker-compose up -d
 ## 📋 Prerequisitos
 
 - Docker Desktop
-- 4 GB RAM disponible
-- Puertos libres: 5434, 5433, 5672, 8081, 8082, 8083, 15672
-- **Nota:** Si tienes PostgreSQL local, puede estar usando el puerto 5432. Este proyecto usa 5434 para evitar conflictos.
+- 8 GB RAM disponible (recomendado por Kafka)
+- Puertos libres: 2181, 5433, 5434, 5435, 5672, 8081, 8082, 8083, 8084, 9092, 15672, 29092
+- **Nota:** Si tienes PostgreSQL local, puede estar usando el puerto 5432. Este proyecto usa puertos alternativos para evitar conflictos.
+
+## ⚙️ Configuración de Variables de Entorno
+
+El proyecto utiliza un archivo `.env` para configurar credenciales y puertos. **Este paso es obligatorio para el servicio de notificaciones.**
+
+### Pasos:
+
+1. Copiar el archivo de ejemplo:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Editar `.env` con tus valores:
+
+### Variables Principales
+
+| Variable | Descripción | Requerido |
+|----------|-------------|-----------|
+| `MAIL_USERNAME` | Usuario SMTP (Mailtrap, Gmail, etc.) | ✅ Sí |
+| `MAIL_PASSWORD` | Contraseña SMTP | ✅ Sí |
+| `MAIL_HOST` | Host del servidor SMTP | Opcional |
+| `MAIL_PORT` | Puerto SMTP | Opcional |
+| `JWT_SECRET` | Secreto para firmar tokens (mín. 32 chars) | Recomendado |
+| `JWT_ACCESS_EXPIRATION` | Expiración access token (ms) | Opcional |
+| `JWT_REFRESH_EXPIRATION` | Expiración refresh token (ms) | Opcional |
+
+### Variables de Base de Datos
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `DB_AUTH_USER` | Usuario PostgreSQL Auth | postgres |
+| `DB_AUTH_PASSWORD` | Contraseña PostgreSQL Auth | postgres |
+| `DB_MANAGEMENT_USER` | Usuario PostgreSQL Management | postgres |
+| `DB_MANAGEMENT_PASSWORD` | Contraseña PostgreSQL Management | postgres |
+| `DB_AUDIT_USER` | Usuario PostgreSQL Audit | postgres |
+| `DB_AUDIT_PASSWORD` | Contraseña PostgreSQL Audit | postgres |
+
+### Variables de RabbitMQ
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `RABBITMQ_USER` | Usuario RabbitMQ | admin |
+| `RABBITMQ_PASSWORD` | Contraseña RabbitMQ | admin123 |
+
+### Variables de Puertos
+
+Si tienes conflictos con puertos locales, puedes cambiarlos:
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `PORT_AUTH` | Puerto ms-auth | 8081 |
+| `PORT_MANAGEMENT` | Puerto ms-management | 8082 |
+| `PORT_NOTIFICATION` | Puerto ms-notification | 8083 |
+| `PORT_AUDIT` | Puerto ms-audit | 8084 |
+| `PORT_RABBITMQ_UI` | Puerto RabbitMQ UI | 15672 |
+| `PORT_KAFKA_UI` | Puerto Kafka UI | 8080 |
+| `PORT_POSTGRES_AUTH` | Puerto PostgreSQL Auth | 5434 |
+| `PORT_POSTGRES_MANAGEMENT` | Puerto PostgreSQL Management | 5433 |
+| `PORT_POSTGRES_AUDIT` | Puerto PostgreSQL Audit | 5435 |
+
+### Ejemplo de Configuración con Mailtrap
+
+```env
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=tu_usuario_mailtrap
+MAIL_PASSWORD=tu_password_mailtrap
+JWT_SECRET=mi_secreto_super_seguro_de_32_caracteres_minimo
+```
+
+### Ejemplo de Configuración con Gmail
+
+```env
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=tu_email@gmail.com
+MAIL_PASSWORD=tu_app_password
+```
+
+> **Nota:** Para Gmail necesitas crear una "App Password" en la configuración de seguridad de tu cuenta.
 
 ## 🧪 Prueba Rápida
 
@@ -121,6 +216,9 @@ curl -X POST http://localhost:8082/api/enrollments \
 # 3. Ver email enviado
 # Ir a: https://ethereal.email/messages
 # Login: gregorio.oconner76@ethereal.email / Cjxq14JGFPCZM72psn
+
+# 4. Consultar eventos de auditoría
+curl http://localhost:8084/api/audit/stats
 ```
 
 **Usuarios disponibles (contraseña: `password123`):**
@@ -135,10 +233,12 @@ curl -X POST http://localhost:8082/api/enrollments \
 | Auth API | http://localhost:8081 | - |
 | Management API | http://localhost:8082 | - |
 | Notification API | http://localhost:8083 | - |
+| Audit API | http://localhost:8084 | - |
 | RabbitMQ UI | http://localhost:15672 | admin / admin123 |
 | Email Viewer | https://mailtrap.io/inboxes/ | 6abd9f88309e4d / 4ec30b10b54c0b |
 | PostgreSQL Auth | localhost:5434 | postgres / postgres |
 | PostgreSQL Management | localhost:5433 | postgres / postgres |
+| PostgreSQL Audit | localhost:5435 | postgres / postgres |
 
 ## 📁 Estructura de los Microservicios
 
@@ -174,6 +274,17 @@ A continuación, se resume la estructura de paquetes de cada microservicio para 
 -   `listener`: Consumidor de RabbitMQ que escucha los eventos de matrícula.
 -   `service`: Lógica para procesar los mensajes y enviar emails con Thymeleaf.
 
+### 4️⃣ ms-academic-audit
+
+-   `config`: Configuración del consumidor de Kafka.
+-   `controller`: Endpoints REST para consultar eventos y estadísticas de auditoría.
+-   `dto`: DTOs para eventos de Kafka y respuestas de la API.
+-   `entity`: Modelo de datos JPA (`AuditEvent`).
+-   `exception`: Manejo global de excepciones.
+-   `listener`: Consumidor de Kafka que escucha eventos de matrículas.
+-   `repository`: Interfaz de Spring Data JPA con queries personalizadas.
+-   `service`: Lógica para guardar eventos y generar estadísticas.
+
 ## 🔄 Flujo Completo
 
 1. **Registro/Login** → Usuario se autentica en `ms-auth`
@@ -181,10 +292,11 @@ A continuación, se resume la estructura de paquetes de cada microservicio para 
 3. **Crea Matrícula** → Request a `ms-management` con token
 4. **Valida Token** → `ms-management` valida con `ms-auth`
 5. **Guarda en BD** → Matrícula se guarda en PostgreSQL
-6. **Publica Mensaje** → `ms-management` envía mensaje a RabbitMQ
-7. **Consume Mensaje** → `ms-notification` recibe de RabbitMQ
-8. **Envía Email** → Email HTML generado con Thymeleaf
-9. **Usuario Recibe** → Email visible en Ethereal
+6. **Publica en RabbitMQ** → `ms-management` envía mensaje para notificación
+7. **Publica en Kafka** → `ms-management` envía evento para auditoría
+8. **Consume RabbitMQ** → `ms-notification` recibe y envía email
+9. **Consume Kafka** → `ms-audit` recibe y guarda evento
+10. **Consulta Auditoría** → Historial disponible en `/api/audit`
 
 ## 📚 Datos Precargados
 
@@ -225,7 +337,7 @@ A continuación, se resume la estructura de paquetes de cada microservicio para 
 - **Backend:** Java 17, Spring Boot 3.2.0
 - **Seguridad:** Spring Security, JWT
 - **Base de Datos:** PostgreSQL 15
-- **Mensajería:** RabbitMQ 3
+- **Mensajería:** RabbitMQ 3 (notificaciones), Apache Kafka (auditoría)
 - **Email:** Spring Mail, Thymeleaf
 - **Contenedores:** Docker, Docker Compose
 - **Build:** Maven
@@ -239,6 +351,7 @@ Para documentación de cada microservicio:
 - [ms-academic-auth/README.md](./ms-academic-auth/README.md)
 - [ms-academic-management/README.md](./ms-academic-management/README.md)
 - [ms-academic-notification/README.md](./ms-academic-notification/README.md)
+- [ms-academic-audit/README.md](./ms-academic-audit/README.md)
 
 ## 🐛 Troubleshooting
 
@@ -270,7 +383,8 @@ docker-compose -f docker-compose-master.yml down -v
 - [ ] Creación de matrícula exitosa
 - [ ] Mensaje visible en RabbitMQ Management
 - [ ] Email recibido en Ethereal
-- [ ] Estadísticas de notificaciones actualizadas
+- [ ] Evento registrado en ms-audit
+- [ ] Estadísticas de auditoría actualizadas
 
 ## 🎯 Características Principales
 
@@ -278,6 +392,7 @@ docker-compose -f docker-compose-master.yml down -v
 - ✅ Gestión completa de estudiantes y cursos
 - ✅ Sistema de matrículas con validaciones
 - ✅ Notificaciones asíncronas vía RabbitMQ
+- ✅ Auditoría de eventos vía Kafka
 - ✅ Emails HTML profesionales
 - ✅ Reintentos automáticos
 - ✅ Health checks

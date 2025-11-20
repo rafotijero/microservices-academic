@@ -7,9 +7,16 @@ networks:
 volumes:
   postgres-auth-data:
   postgres-management-data:
+  postgres-audit-data:
   rabbitmq-data:
+  zookeeper-data:
+  zookeeper-logs:
+  kafka-data:
 
 services:
+  # ========================================
+  # NOTA: Copiar .env.example a .env y configurar
+  # ========================================
   # ========================================
   # BASE DE DATOS PARA AUTENTICACIÓN
   # ========================================
@@ -17,11 +24,11 @@ services:
     image: postgres:15-alpine
     container_name: postgres-auth
     environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_AUTH_NAME:-auth_db}
+      POSTGRES_USER: ${DB_AUTH_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_AUTH_PASSWORD:-postgres}
     ports:
-      - "5434:5432"
+      - "${PORT_POSTGRES_AUTH:-5434}:5432"
     volumes:
       - postgres-auth-data:/var/lib/postgresql/data
     networks:
@@ -39,11 +46,11 @@ services:
     image: postgres:15-alpine
     container_name: postgres-management
     environment:
-      POSTGRES_DB: academic_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_MANAGEMENT_NAME:-academic_db}
+      POSTGRES_USER: ${DB_MANAGEMENT_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_MANAGEMENT_PASSWORD:-postgres}
     ports:
-      - "5433:5432"
+      - "${PORT_POSTGRES_MANAGEMENT:-5433}:5432"
     volumes:
       - postgres-management-data:/var/lib/postgresql/data
     networks:
@@ -55,17 +62,111 @@ services:
       retries: 5
 
   # ========================================
+  # BASE DE DATOS PARA AUDITORÍA
+  # ========================================
+  postgres-audit:
+    image: postgres:15-alpine
+    container_name: postgres-audit
+    environment:
+      POSTGRES_DB: ${DB_AUDIT_NAME:-audit_db}
+      POSTGRES_USER: ${DB_AUDIT_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_AUDIT_PASSWORD:-postgres}
+    ports:
+      - "${PORT_POSTGRES_AUDIT:-5435}:5432"
+    volumes:
+      - postgres-audit-data:/var/lib/postgresql/data
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # ZOOKEEPER (requerido por Kafka)
+  # ========================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "${PORT_ZOOKEEPER:-2181}:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # KAFKA
+  # ========================================
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "${PORT_KAFKA:-9092}:9092"
+      - "${PORT_KAFKA_EXTERNAL:-29092}:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ========================================
+  # KAFKA UI
+  # ========================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "${PORT_KAFKA_UI:-8080}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - academic-network
+
+  # ========================================
   # RABBITMQ
   # ========================================
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin123}
     ports:
-      - "5672:5672"   # Puerto AMQP
-      - "15672:15672" # Puerto Management UI
+      - "${PORT_RABBITMQ:-5672}:5672"   # Puerto AMQP
+      - "${PORT_RABBITMQ_UI:-15672}:15672" # Puerto Management UI
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
@@ -88,14 +189,14 @@ services:
       SPRING_PROFILE: dev
       DB_HOST: postgres-auth
       DB_PORT: 5432
-      DB_NAME: auth_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      JWT_SECRET: mySecretKeyForJWT2024SuperSecureAndLongEnough123456789
-      JWT_ACCESS_EXPIRATION: 3600000
-      JWT_REFRESH_EXPIRATION: 86400000
+      DB_NAME: ${DB_AUTH_NAME:-auth_db}
+      DB_USER: ${DB_AUTH_USER:-postgres}
+      DB_PASSWORD: ${DB_AUTH_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-mySecretKeyForJWT2024SuperSecureAndLongEnough123456789}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-3600000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-86400000}
     ports:
-      - "8081:8081"
+      - "${PORT_AUTH:-8081}:8081"
     depends_on:
       postgres-auth:
         condition: service_healthy
@@ -120,21 +221,24 @@ services:
       SPRING_PROFILE: dev
       DB_HOST: postgres-management
       DB_PORT: 5432
-      DB_NAME: academic_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_NAME: ${DB_MANAGEMENT_NAME:-academic_db}
+      DB_USER: ${DB_MANAGEMENT_USER:-postgres}
+      DB_PASSWORD: ${DB_MANAGEMENT_PASSWORD:-postgres}
       SERVER_PORT: 8082
       AUTH_SERVICE_URL: http://ms-auth:8081
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: admin
-      RABBITMQ_PASSWORD: admin123
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
-      - "8082:8082"
+      - "${PORT_MANAGEMENT:-8082}:8082"
     depends_on:
       postgres-management:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
       ms-auth:
         condition: service_healthy
@@ -159,15 +263,15 @@ services:
       SPRING_PROFILE: dev
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      RABBITMQ_USER: admin
-      RABBITMQ_PASSWORD: admin123
-      MAIL_HOST: smtp.mailtrap.io
-      MAIL_PORT: 2525
-      MAIL_USERNAME: 6abd9f88309e4d
-      MAIL_PASSWORD: 4ec30b10b54c0b
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
+      MAIL_HOST: ${MAIL_HOST:-smtp.mailtrap.io}
+      MAIL_PORT: ${MAIL_PORT:-2525}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       SERVER_PORT: 8083
     ports:
-      - "8083:8083"
+      - "${PORT_NOTIFICATION:-8083}:8083"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -175,6 +279,37 @@ services:
       - academic-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8083/api/notifications/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # MICROSERVICIO DE AUDITORÍA
+  # ========================================
+  ms-audit:
+    build:
+      context: ./ms-academic-audit
+      dockerfile: Dockerfile
+    container_name: ms-audit
+    environment:
+      DB_HOST: postgres-audit
+      DB_PORT: 5432
+      DB_NAME: ${DB_AUDIT_NAME:-audit_db}
+      DB_USERNAME: ${DB_AUDIT_USER:-postgres}
+      DB_PASSWORD: ${DB_AUDIT_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "${PORT_AUDIT:-8084}:8084"
+    depends_on:
+      postgres-audit:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - academic-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
